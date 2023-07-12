@@ -8,103 +8,68 @@
 #                                #
 ##################################
 from . import ScenarioData as SData
-import json as js
-
-
-
-# WIP outline to show how dataset will be designed and considered
-# TODO: Define API that stores datasets of this form in JSON files and loads them
-x, y = 0, 0
-
-HomogenousDataset = {
-    "size":        [x, y],
-    "obstacles":   [SData.Shape],
-    "roi":         [SData.Shape],
-    "sensor_data": SData.SensorData(),
-    "sensors":     [SData.Shape],
-    "paths":       [SData.Path]
-}
-
-HeterogenousDataset = {
-    "size":        [x, y],
-    "obstacles":   [SData.Shape],
-    "roi":         [SData.Shape],
-    "sensors":     [SData.Sensor],
-    "paths":       [SData.Path]
-}
-
-
+import os
+import pickle
 
 class ScenarioDataset():
-    def __init__(self, datasetMode="homo", filename="default.json", areaSize=(64, 64)):
-        '''
-        @ARGS
-        datasetMode => Can be either hetero or homo or load; not case sensitive
-        filename => Defines the filename that the file will be stored under 
-        '''
-        self.Dataset = {
-                        "size":        [areaSize[0], areaSize[1]],
-                        "obstacles":   [],
-                        "roi":         [],
-                        "paths":       []
-            }
-        if datasetMode.upper() == "LOAD":
-            self.LoadDataset()
-            self.DatasetType = "HOMO" if "sensor_data" in self.Dataset.keys() \
-                          else "HETERO"
-                          
-                          
-        
-        self.DatasetType = datasetMode.upper()
-        self.FileName = filename
-        
-        assert self.DatasetType in ("HOMO", "HETERO"), \
-           f"Invalid datasetMode parameter {datasetMode} set as {self.DatasetType}" 
-           
-        assert self.FileName[-5:] == ".json", \
-            f"Invalid filename, please use .json extension; Set filename is {filename}"
-            
-        assert len(areaSize) == 2 ,\
-            f"Invalid areaSize param; use a tuple/list of length 2 to contain each \
-            dimension; object passed: {areaSize}"
-           
-           
-        
-        
-        
-        if self.DatasetType == "HOMO":
-            self.Dataset["sensor_data"] = []
-            self.Dataset["sensors"]     = []
-        
-        if self.DatasetType == "HETERO":
-            self.Dataset["sensors"]     = []
-        
-        
-        self.StoreDataset()
-            
-        
+    def __init__(self, areaSize=(64,64)):
+    
+        self.Size = areaSize
+        self.SensorData = SData.SensorData()
+        self.Obstacles = []
+        self.FOI = []
+        self.Sensors = []
         
     
+    def SetSize(self, param=(64,64)):
+        self.Size = param
     
-    def LoadDataset(self):
-        with open(self.FileName, 'r') as infile:
-            self.Dataset = js.load(infile)
-            assert all(key in self.Dataset.keys() \
-                       for key in ["size", "obstacles", "roi", "paths", "sensors"]) \
-                    and len(self.Dataset.keys()) in (5, 6), \
-                    f"Invalid Data loaded at file {self.FileName}; Data not in proper format"
-            self.DatasetType = "HOMO" if "sensor_data" in self.Dataset.keys() \
-                          else "HETERO"
-            infile.close()
-        
-        
-    
-    def StoreDataset(self, p: list[SData.Shape]):
-        with open(self.FileName, 'w') as outfile:
-            js.dump(self.Dataset, outfile, indent=4)
-            outfile.close()
+    def SetSensorData(self, param: SData.SensorData):
+        self.SensorData = param
             
     def AddSensor(self, param: SData.Sensor):
-        pass
-        
+        self.Sensors.append(param)
     
+    def AddObstacle(self, param: SData.Shape):
+        self.Obstacles.append(param)
+    
+    def AddFieldOfInterest(self, param: SData.FieldOfInterest):
+        self.FOI.append(param)
+        
+class ScenarioDatasetAPI():
+    def __init__(self, filename="default.pk"):
+        '''
+        @ARGS
+        filename => Defines the filename that the file will be stored under 
+        '''
+        self.FileName = filename
+            
+        assert self.FileName[-3:] == ".pk", \
+            f"Invalid filename, please use .pk extension; Set filename is {filename}"
+            
+        assert self.FileName != "default.pk", \
+            "Filename is set to default, please pass a filename on initilization of dataset"
+            
+            
+        self.Dataset = ScenarioDataset()
+        if os.path.exists(filename):
+            self.LoadDataset()
+        else:
+            self.StoreDataset()
+            
+            
+    def LoadDataset(self):
+        result = ScenarioDataset()
+        with open(self.FileName, 'rb') as infile:
+            result = pickle.load(infile)
+            infile.close()
+        
+        return result
+    
+    def StoreDataset(self):
+        with open(self.FileName, 'wb') as outfile:
+            pickle.dump(self.Dataset, outfile)
+            outfile.close()
+            
+    def SetDataset(self, dataset: ScenarioDataset):
+        self.Dataset = dataset
