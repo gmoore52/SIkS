@@ -37,18 +37,19 @@ class ScenarioDataset():
         self.FOI.append(param)
         
 class ScenarioDatasetAPI():
-    def __init__(self, filename="default.pk"):
+    def __init__(self, filename: str ="default.ksce", filepath: str =os.path.curdir):
         '''
         @ARGS
         filename => Defines the filename that the file will be stored under 
         '''
-        self.FileName = filename
+        self.Filepath = filepath
+        self.FileName = os.path.join(self.Filepath, filename)
             
-        assert self.FileName[-3:] == ".pk", \
-            f"Invalid filename, please use .pk extension; Set filename is {filename}"
+        assert self.FileName[-5:] == ".ksce", \
+            f"Invalid filename, please use .ksce extension; Set filename is {filename}"
             
-        assert self.FileName != "default.pk", \
-            "Filename is set to default, please pass a filename on initilization of dataset"
+        assert self.FileName != "default.ksce", \
+            "Filename is set to default, please pass a filename on initilization of dataset API"
             
             
         self.Dataset = ScenarioDataset()
@@ -70,6 +71,14 @@ class ScenarioDatasetAPI():
         with open(self.FileName, 'wb') as outfile:
             pickle.dump(self.Dataset, outfile)
             outfile.close()
+            
+    def SetFilepath(self, filepath: str):
+        self.Filepath = filepath
+            
+    def SetFilename(self, filename: str):
+        assert self.FileName[-5:] == ".ksce", \
+            f"Invalid filename, please use .ksce extension; Set filename is {filename}"
+        self.FileName = os.path.join(self.Filepath, filename)
             
     def SetDataset(self, dataset: ScenarioDataset):
         self.Dataset = dataset
