@@ -22,6 +22,12 @@ class Point():
         '''
         self.xPos = x
         self.yPos = y
+        
+    def __str__(self):
+        '''
+        Define str method for printing class data
+        '''
+        return f"Position:\nx = {self.xPos}  y = {self.yPos}"
 
 class Shape():
     def __init__(self, xPos=0, yPos=0) -> None:
@@ -39,6 +45,12 @@ class Rectangle(Shape):
         # GOAL: Keep position center of shape while adhering to side lengths
         self.TopLeft  = Point(x=xPos-(xLen//2), y=yPos-(yLen//2))
         self.BotRight = Point(x=xPos+(xLen//2), y=yPos+(yLen//2))
+        
+    def __str__(self):
+        '''
+        Define str method for printing class data
+        '''
+        return f"Rectangle positions: \nTop Left: {self.TopLeft}  Bottom Right: {self.BotRight}"
     
 #################################
 #                               # 
@@ -64,6 +76,12 @@ class SensorData():
         self.SensingRange = senseRange
         self.CommRange = commRange
         self.MoveRange = moveRange
+        
+    def __str__(self):
+        '''
+        Define str method for printing class data
+        '''
+        return f"Sensor Data:\nSensing Range: {self.SensingRange}\nCommunication Range: {self.CommRange}\nMovement Range: {self.MoveRange}"
         
 
 class Sensor(Shape):

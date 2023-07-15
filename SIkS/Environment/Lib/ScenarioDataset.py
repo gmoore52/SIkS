@@ -53,7 +53,7 @@ class ScenarioDatasetAPI():
             
             
         self.Dataset = ScenarioDataset()
-        if os.path.exists(filename):
+        if os.path.exists(self.FileName):
             self.LoadDataset()
         else:
             self.StoreDataset()

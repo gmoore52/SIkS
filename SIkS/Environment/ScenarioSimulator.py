@@ -1,12 +1,15 @@
+import sys
+sys.path.append("/home/gavin/Dev/SIkS/SIkS/")
+
 import Lib.ScenarioDataset as SData
 import Lib.ScenarioData as SD
 import numpy as np
+import skimage.draw as skd
 
 
 class ScenarioSimulator:
     def __init__(self, dataset: SData.ScenarioDataset) -> None:
         self.ScenarioDim = dataset.Size
-        # self.Sensors = dataset.Sensors
         
         self.Sensors = {}
         self.Actions = {}
@@ -15,43 +18,35 @@ class ScenarioSimulator:
         for id, sensor in enumerate(dataset.Sensors):
             self.Sensors[id] = sensor
             
-        # Randomly deploy sensors immediately
-        self.RandomlyDeploySensors()
         
         # Deployment field will cotnain valid, invalid, and taken positions
         # 0 => valid; 1 => taken; 2=> invalid
         self.DeploymentField = np.zeros(self.ScenarioDim)
+        # Randomly deploy sensors immediately
+        self.RandomlyDeploySensors()
         self.ComputeDeploymentField()
     # change int type to int32 for 2^32 degrees of coverage, current 255 max coverage
         self.CoverageMatrix = np.zeros(self.ScenarioDim, dtype=np.int8)
+        self.ComputeCoverage()
         
-        
-        
-        
-    def CalculateCircularIntersection(self, sensor: SD.Sensor, position: SD.Point):
-        '''
-        Uses Euclidean Distance formula to determine if the point in question is inside
-        the sensing range of the sensor in question and returns the boolean result
-        '''
-        return (((position.xPos-sensor.Position.xPos)**2 + 
-                (position.yPos-sensor.Position.yPos)**2) ** 0.5) \
-                <= self.SenseData.SensingRange
         
         
     def ComputeCoverage(self):
-        # Reset coverage matrix
+        '''
+        Method that will compute our coverage matrix based on current sensor data
+        and on current sensor positions
+        '''
+        # Reset coverage matrix to be all zeros
         self.CoverageMatrix = np.zeros(self.ScenarioDim, dtype=np.int8)
-        
-        # Loop through every element of the coverage matrix and compute if its distance
-        # shows that it is inside the range of each sensor
-        # The coverage matrix will show the coverage degree of each respective point in
-        # the finite field in question, the field will be considered with only integer 
-        # distances for simplicities sake
-        for y in range(self.ScenarioDim[1]):
-            for x in range(self.ScenarioDim[0]):
-                for id, sensor in self.Sensors.items():
-                    if self.CalculateCircularIntersection(sensor, SD.Point(x=x, y=y)):
-                        self.CoverageMatrix[y][x] += 1
+        # We will use the disk method from skimage.draw that will help draw a disk of
+        # appropriate size and position in our coverage matrix relative to each sensor
+        # each sensor will increase the coverage of each point inside its disk by 1 
+        for id, sensor in self.Sensors.items():
+            x, y = \
+                sensor.Position.xPos, sensor.Position.yPos
+            rr, cc = skd.disk((x, y), self.SenseData.SensingRange, shape=None)
+            rr, cc = np.clip(rr, 0, self.ScenarioDim[0]-1), np.clip(cc, 0, self.ScenarioDim[1]-1)
+            self.CoverageMatrix[rr, cc] += 1
                         
                         
     def ComputeDeploymentField(self):
@@ -60,17 +55,18 @@ class ScenarioSimulator:
         '''
         for sensor in self.Sensors.values():
             x, y = sensor.Position.xPos, sensor.Position.yPos
-            self.DeploymentField[y, x] = 2
+            self.DeploymentField[x, y] = 1
             
         
                         
                         
     def RandomlyDeploySensors(self):
         for id, sensor in self.Sensors.items():
-            validPos = np.random.choice(np.argwhere(self.DeploymentField==0))
+            validIndices = np.argwhere(self.DeploymentField==0)
+            validPos = validIndices[np.random.choice(len(validIndices))]
             self.Sensors[id].Position.xPos, self.Sensors[id].Position.yPos = \
                 validPos[0], validPos[1]
-            self.DeploymentField[validPos[0], validPos[1]] = 2
+            self.DeploymentField[validPos[0], validPos[1]] = 1
         
         self.ComputeDeploymentField()
         self.ComputeCoverage()
@@ -78,15 +74,15 @@ class ScenarioSimulator:
     def GetSensorObsFromID(self, senseID):
         # Get Sensor data for each sensor that contains the proper 
         sensor = self.Sensors[senseID]
-        senseRange, moveRange = self.SenseData.SenseRange, self.SenseData.MoveRange
+        senseRange, moveRange = self.SenseData.SensingRange, self.SenseData.MoveRange
         obsSize = ((senseRange+moveRange)*2, (senseRange+moveRange)*2)
-        obsPos = (sensor.Position.xPos - obsSize[0], sensor.Position.yPos - obsSize[1])
-        
+        obsPos = [sensor.Position.xPos - (obsSize[0]//2), sensor.Position.yPos - (obsSize[1]//2)]
+       
         # TODO: Currently do not account for valid ranges of indices
         CovObsMatrix = \
-        self.CoverageMatrix[obsPos[1]-1:obsPos+obsSize[0], obsPos[0]-1:obsPos+obsSize[1]]
+        self.CoverageMatrix[obsPos[0]-1:obsPos[0]+obsSize[0], obsPos[1]-1:obsPos[1]+obsSize[1]]
         PosObsMatrix = \
-        self.DeploymentField[obsPos[1]-1:obsPos+obsSize[0], obsPos[0]-1:obsPos+obsSize[1]]
+        self.DeploymentField[obsPos[0]-1:obsPos[0]+obsSize[0], obsPos[1]-1:obsPos[1]+obsSize[1]]
         
         
         return CovObsMatrix, PosObsMatrix
@@ -146,14 +142,21 @@ class ScenarioSimulator:
             actionList.append([xPos + y, yPos - x])
             actionList.append([xPos - y, yPos - x])
             
-        return actionList
+        # Trim the actions list to only account for valid movements
+        trimmedActions = \
+            np.clip(actionList, [0, 0], [self.ScenarioDim[0]-1, self.ScenarioDim[1]-1])
+        # Return only the trimmed valid movements that are available positions
+        # according to the deployment field
+        trimmedActions = [a for a in trimmedActions if self.DeploymentField[a[0], a[1]] == 0]
+        return trimmedActions
+        return [a for a in trimmedActions if self.DeploymentField[a[0], a[1]] == 0]
     
 
     def LoadActionToID(self, ID, action):
         '''
         Function loads the action to the action list
         '''
-        assert action not in self.GetValidActionForID(ID), \
+        assert np.any(np.all(action == self.GetValidActionForID(ID), axis=1)), \
             "Invalid action passed as action"
             
         self.Actions[ID] = action
@@ -164,16 +167,17 @@ class ScenarioSimulator:
         Function generates new scenario based on the actions list
         can be seen as version of step() function
         '''
-        assert self.Actions.keys() == self.Sensors.Keys, \
+        assert self.Actions.keys() == self.Sensors.keys(), \
             "Not enough actions loaded to actions list or invalid actions"
             
             
         for id in self.Actions.keys():
-            self.DeploymentField[self.Sensors[id].xPos, self.Sensors[id].yPos] = 0
-            self.Sensors[id].xPos = self.Actions[id][0]
-            self.Sensors[id].yPos = self.Actions[id][1]
-            self.DeploymentField[self.Sensors[id].xPos, self.Sensors[id].yPos] = 1
+            self.DeploymentField[self.Sensors[id].Position.xPos, self.Sensors[id].Position.yPos] = 0
+            self.Sensors[id].Position.xPos = self.Actions[id][0]
+            self.Sensors[id].Position.yPos = self.Actions[id][1]
+            self.DeploymentField[self.Sensors[id].Position.xPos, self.Sensors[id].Position.yPos] = 1
             
+        self.ComputeDeploymentField()
         self.ComputeCoverage()
     
 

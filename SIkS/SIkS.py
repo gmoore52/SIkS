@@ -8,8 +8,8 @@
 #                                 #
 ###################################
 import tkinter as tk
-from Lib.ScenarioDataset import ScenarioDataset as SDSet
-import Lib.ScenarioData as SD
+import Environment.Lib.ScenarioDataset as SDSet
+import Environment.Lib.ScenarioData as SD
 from tkinter import messagebox
 
 
@@ -31,6 +31,18 @@ class DataManager():
 
         newData.LoadDataset()
         print(newData.Dataset)
+        
+    def SaveFile(self, filename, nSensors, dfSize, foiPos, foiSize, sense_range, comm_range, move_range):
+        API = SDSet.ScenarioDatasetAPI(filename=filename)
+        senseData = SD.SensorData(senseRange=sense_range, commRange= comm_range, moveRange=move_range)
+        API.Dataset.SensorData = senseData
+        API.Dataset.Sensors = [SD.Sensor() for x in range(nSensors)]
+        API.Dataset.Size = dfSize
+        API.Dataset.AddFieldOfInterest(SD.FieldOfInterest(xPos=foiPos[0], yPos=foiPos[1],
+                                                          width=foiSize[0], height=foiSize[1],
+                                                          reqCoverage=5))
+        
+        API.StoreDataset()
 
 
 class MainFrame(tk.Frame):
@@ -48,7 +60,15 @@ class MainFrame(tk.Frame):
         self.foi_height = 0
         self.foi_xpos = 0
         self.foi_ypos = 0
-        self.scenario_filename = ".pk"
+        self.scenario_filename = ".ksce"
+        
+        self.sense_range = 0
+        self.comm_range = 0
+        self.move_range = 0
+        
+        self.SenseRange = tk.IntVar()
+        self.CommRange = tk.IntVar()
+        self.MoveRange = tk.IntVar()
 
         # self.button = tk.Button(self, text='Save Dataset', height=2, width=8, highlightthickness=0, command=lambda: self.parent.Data.saveData())
         # self.button.grid(row=0, column=0, pady=(50,0), padx=(120,0))
@@ -126,19 +146,19 @@ class MainFrame(tk.Frame):
         self.SensingRangeLabel = tk.Label(self, text="Sensing Range")
         self.SensingRangeLabel.grid(row=14, column=0, columnspan=2)
         
-        self.SensingRange = tk.Scale(self, from_=0, to=50, orient=tk.HORIZONTAL, length=200, sliderlength=20)
+        self.SensingRange = tk.Scale(self, from_=0, to=50, orient=tk.HORIZONTAL, length=200, sliderlength=20, command=self.ChangeSenseRange)
         self.SensingRange.grid(row=15, column=0, columnspan=2)
 
         self.ComRangeLabel = tk.Label(self, text="Communication Range")
         self.ComRangeLabel.grid(row=16, column=0, columnspan=2)
 
-        self.ComRange = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL, length=200, sliderlength=20)
+        self.ComRange = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL, length=200, sliderlength=20, command=self.ChangeCommRange)
         self.ComRange.grid(row=17, column=0, columnspan=2)
 
         self.MoveRangeLabel = tk.Label(self, text="Movement Range")
         self.MoveRangeLabel.grid(row=18, column=0, columnspan=2)
 
-        self.MoveRange = tk.Scale(self, from_=0, to=50, orient=tk.HORIZONTAL, length=200, sliderlength=20)
+        self.MoveRange = tk.Scale(self, from_=0, to=50, orient=tk.HORIZONTAL, length=200, sliderlength=20, command=self.ChangeMoveRange)
         self.MoveRange.grid(row=19, column=0, columnspan=2)
 
         self.FilenameLabel = tk.Label(self, text=f"Filename: {self.scenario_filename}")
@@ -150,6 +170,30 @@ class MainFrame(tk.Frame):
 
         self.ChangeScenarioFilename = tk.Button(self, text="Confirm", command=self.ChangeFilename)
         self.ChangeScenarioFilename.grid(row=21, column=1)
+        
+        self.SaveFile = tk.Button(self, text="Save File", 
+                                  command=lambda: 
+                                    self.parent.Data.SaveFile(self.scenario_filename+".ksce", 
+                                                              self.n_sensors, (self.df_width, self.df_height), 
+                                                              (self.foi_xpos, self.foi_ypos), 
+                                                              (self.foi_width, self.foi_height),
+                                                              self.sense_range, self.comm_range,
+                                                              self.move_range))
+        self.SaveFile.grid(row=22, column=0, columnspan=2)
+        
+        
+    def ChangeSenseRange(self, e):
+        self.SenseRange.set(e)
+        self.sense_range = self.SenseRange.get()
+        
+    def ChangeCommRange(self, e):
+        self.CommRange.set(e)
+        self.comm_range = self.CommRange.get()
+        
+    def ChangeMoveRange(self, e):
+        self.MoveRange.set(e)
+        self.move_range = self.MoveRange.get()
+        
 
     def ChangeSensorValue(self):
         SensorEntryVal = self.SensorEntry.get()
@@ -194,7 +238,7 @@ class MainFrame(tk.Frame):
     def ChangeFOIxValue(self):
         FOIxVal = self.FOIxEntry.get()
         if FOIxVal.isdigit() and int(FOIxVal) > 0:
-            self.foi_xpos = FOIxVal
+            self.foi_xpos = int(FOIxVal)
             self.FOILabelX.config(text=f"Field of Interest x Position: {self.foi_xpos}")
         else:
             messagebox.showerror(title="Error",
@@ -203,7 +247,7 @@ class MainFrame(tk.Frame):
     def ChangeFOIyValue(self):
         FOIyVal = self.FOIyEntry.get()
         if FOIyVal.isdigit() and int(FOIyVal) > 0:
-            self.foi_ypos = FOIyVal
+            self.foi_ypos = int(FOIyVal)
             self.FOILabelY.config(text=f"Field of Interest y Position: {self.foi_ypos}")
         else:
             messagebox.showerror(title="Error",
@@ -211,14 +255,10 @@ class MainFrame(tk.Frame):
 
     def ChangeFilename(self):
         if self.FilenameEntry.get().isalnum():
-            scenario_filename = self.FilenameEntry.get()
-            self.FilenameLabel.config(text=f"Filename: {scenario_filename}.pk")
+            self.scenario_filename = self.FilenameEntry.get()
+            self.FilenameLabel.config(text=f"Filename: {self.scenario_filename}.ksce")
         else:
             messagebox.showerror(title="Error", message="Filename can only contain letters and numbers.")
-
-    def PackageData(self):
-        self.n_sensors.Get()
-        pass
 
 
 class SIkSInterface(tk.Frame):
