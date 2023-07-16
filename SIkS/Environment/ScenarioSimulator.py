@@ -8,7 +8,7 @@ import skimage.draw as skd
 
 
 class ScenarioSimulator:
-    def __init__(self, dataset: SData.ScenarioDataset) -> None:
+    def __init__(self, dataset: SData.ScenarioDataset):
         self.ScenarioDim = dataset.Size
         
         self.Sensors = {}
@@ -61,6 +61,10 @@ class ScenarioSimulator:
                         
                         
     def RandomlyDeploySensors(self):
+        '''
+        Function that can be used to reset the simulation via randomly deploying sensors
+        will check for valid indices each time it deploys a sensor
+        '''
         for id, sensor in self.Sensors.items():
             validIndices = np.argwhere(self.DeploymentField==0)
             validPos = validIndices[np.random.choice(len(validIndices))]
@@ -72,22 +76,50 @@ class ScenarioSimulator:
         self.ComputeCoverage()
     
     def GetSensorObsFromID(self, senseID):
+        '''
+        Function that gets observation data for each respective sensor with id senseID
+        '''
         # Get Sensor data for each sensor that contains the proper 
         sensor = self.Sensors[senseID]
         senseRange, moveRange = self.SenseData.SensingRange, self.SenseData.MoveRange
+        # Make size and position of the observations in relation to the sensor data
+        # and to each respective sensors position
         obsSize = ((senseRange+moveRange)*2, (senseRange+moveRange)*2)
         obsPos = [sensor.Position.xPos - (obsSize[0]//2), sensor.Position.yPos - (obsSize[1]//2)]
-       
-        # TODO: Currently do not account for valid ranges of indices
-        CovObsMatrix = \
-        self.CoverageMatrix[obsPos[0]-1:obsPos[0]+obsSize[0], obsPos[1]-1:obsPos[1]+obsSize[1]]
-        PosObsMatrix = \
-        self.DeploymentField[obsPos[0]-1:obsPos[0]+obsSize[0], obsPos[1]-1:obsPos[1]+obsSize[1]]
+        # Make the observation matrices to be returned at the end of the function
+        covMatrix = np.zeros(obsSize)
+        posMatrix = np.zeros(obsSize)
         
+        borderSize = ((obsSize[0]*2)+self.ScenarioDim[0], (obsSize[1]*2)+self.ScenarioDim[1])
+        # Use -1 for coverageMatrix as negative is nonexistent coverage
+        BorderCoverageMatrix   = np.full(borderSize, -1)
+        # Use 2 for deploymentMatrix as 2 is invalid index for deployment
+        BorderDeploymentMatrix = np.full(borderSize,  2)
         
-        return CovObsMatrix, PosObsMatrix
+        # Fill the proper areas in the border matrices
+        BorderCoverageMatrix[obsSize[0]:-obsSize[0], obsSize[1]:-obsSize[1]]   = self.CoverageMatrix
+        BorderDeploymentMatrix[obsSize[0]:-obsSize[0], obsSize[1]:-obsSize[1]] = self.DeploymentField
+        
+        # TODO: Debug if the positions are valid or if they need pushed over by a constant
+        # Make new positions for the border matrices
+        borderPos = (obsPos[0]+obsSize[0], obsPos[1]+obsSize[1])
+        # Calculate the coverage and positon matrix based on the border matrices
+        covMatrix = \
+        BorderCoverageMatrix[borderPos[0]-1:borderPos[0]+obsSize[0],
+                             borderPos[1]-1:borderPos[1]+obsSize[1]]
+        
+        posMatrix = \
+            BorderDeploymentMatrix[borderPos[0]-1:borderPos[0]+obsSize[0], 
+                                   borderPos[1]-1:borderPos[1]+obsSize[1]]
+            
+        return covMatrix, posMatrix
+    
     
     def GetGlobalObs(self):
+        '''
+        Function that will return the global state/observations in the form
+        of the covreage matrix and the deployment field
+        '''
         # self.ComputeCoverage()
         # self.ComputeDeploymentField()
         return self.CoverageMatrix, self.DeploymentField
