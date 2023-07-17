@@ -1,5 +1,6 @@
-import sys
-sys.path.append("/home/gavin/Dev/SIkS/SIkS/")
+# import sys
+# sys.path.append("/home/gavin/Dev/SIkS/SIkS/")
+
 
 import Lib.ScenarioDataset as SData
 import Lib.ScenarioData as SD
@@ -84,7 +85,7 @@ class ScenarioSimulator:
         senseRange, moveRange = self.SenseData.SensingRange, self.SenseData.MoveRange
         # Make size and position of the observations in relation to the sensor data
         # and to each respective sensors position
-        obsSize = ((senseRange+moveRange)*2, (senseRange+moveRange)*2)
+        obsSize = (1+(senseRange+moveRange)*2, 1+(senseRange+moveRange)*2)
         obsPos = [sensor.Position.xPos - (obsSize[0]//2), sensor.Position.yPos - (obsSize[1]//2)]
         # Make the observation matrices to be returned at the end of the function
         covMatrix = np.zeros(obsSize)
@@ -181,7 +182,6 @@ class ScenarioSimulator:
         # according to the deployment field
         trimmedActions = [a for a in trimmedActions if self.DeploymentField[a[0], a[1]] == 0]
         return trimmedActions
-        return [a for a in trimmedActions if self.DeploymentField[a[0], a[1]] == 0]
     
 
     def LoadActionToID(self, ID, action):
