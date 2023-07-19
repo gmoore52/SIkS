@@ -8,8 +8,8 @@
 #                                 #
 ###################################
 import tkinter as tk
-import Environment.Lib.ScenarioDataset as SDSet
-import Environment.Lib.ScenarioData as SD
+import ScenarioDataset as SDSet
+import ScenarioData as SD
 from tkinter import messagebox
 
 
@@ -19,7 +19,7 @@ class DataManager():
 
     def saveData(self):
         # Test function for testing the api manually
-        filename = "pickletest.pk"
+        filename = "pickletest.json"
 
         newData = SDSet(filename=filename, datasetMode="hetero")
 
@@ -60,7 +60,7 @@ class MainFrame(tk.Frame):
         self.foi_height = 0
         self.foi_xpos = 0
         self.foi_ypos = 0
-        self.scenario_filename = ".ksce"
+        self.scenario_filename = ".json"
         
         self.sense_range = 0
         self.comm_range = 0
@@ -173,7 +173,7 @@ class MainFrame(tk.Frame):
         
         self.SaveFile = tk.Button(self, text="Save File", 
                                   command=lambda: 
-                                    self.parent.Data.SaveFile(self.scenario_filename+".ksce", 
+                                    self.parent.Data.SaveFile(self.scenario_filename+".json", 
                                                               self.n_sensors, (self.df_width, self.df_height), 
                                                               (self.foi_xpos, self.foi_ypos), 
                                                               (self.foi_width, self.foi_height),
@@ -256,7 +256,7 @@ class MainFrame(tk.Frame):
     def ChangeFilename(self):
         if self.FilenameEntry.get().isalnum():
             self.scenario_filename = self.FilenameEntry.get()
-            self.FilenameLabel.config(text=f"Filename: {self.scenario_filename}.ksce")
+            self.FilenameLabel.config(text=f"Filename: {self.scenario_filename}.json")
         else:
             messagebox.showerror(title="Error", message="Filename can only contain letters and numbers.")
 
