@@ -1,0 +1,3 @@
+[submodule "SIkS_cpp/lib/submodules/eigen"]
+	path = SIkS_cpp/lib/submodules/eigen
+	url = https://github.com/libigl/eigen.git
