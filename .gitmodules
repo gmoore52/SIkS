@@ -1,3 +1,6 @@
 [submodule "SIkS_cpp/lib/submodules/eigen"]
 	path = SIkS_cpp/lib/submodules/eigen
 	url = https://github.com/libigl/eigen.git
+[submodule "SIkS_cpp/lib/submodules/json"]
+	path = SIkS_cpp/lib/submodules/json
+	url = https://github.com/nlohmann/json.git
