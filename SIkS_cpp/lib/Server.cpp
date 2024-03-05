@@ -111,6 +111,10 @@ void Server::RunServer()
         {
             response = std::to_string(m_Simulator->Get_n_Actions());
         }
+        if(msg == "get_n_agents")
+        {
+            response = std::to_string(m_Simulator->Get_n_Agents());
+        }
         if(msg == "get_deployment_field")
         {
             response = SerializeMatrix(m_Simulator->GetDeploymentField());
@@ -143,7 +147,7 @@ void Server::RunServer()
             bytes_sent += bytes_sent_now;
         }
 
-        send(m_ClientSocket, response.c_str(), response.size(), 0);
+//        send(m_ClientSocket, response.c_str(), response.size(), 0);
     }
 
     close(m_ClientSocket);
@@ -151,10 +155,11 @@ void Server::RunServer()
 }
 
 
-std::string Server::SerializeMatrix(const Eigen::MatrixXi& matrix)
+std::string Server::SerializeMatrix(const Eigen::MatrixXi& matrix, const bool& add_size)
 {
     std::ostringstream oss;
-    oss << matrix.rows() << " " << matrix.cols() << " ";
+    if(add_size)
+        oss << matrix.rows() << " " << matrix.cols() << " ";
     for (int i = 0; i < matrix.rows(); ++i) {
         for (int j = 0; j < matrix.cols(); ++j) {
             oss << matrix(i, j) << " ";
@@ -173,10 +178,11 @@ std::string Server::SerializeVector(const Eigen::Vector3i& vec)
     return oss.str();
 }
 
-std::string Server::SerializeVector(const std::vector<unsigned>& vec)
+std::string Server::SerializeVector(const std::vector<unsigned>& vec, const bool& add_size)
 {
     std::ostringstream oss;
-    oss << 1 << " " << vec.size() << " ";
+    if(add_size)
+        oss << 1 << " " << vec.size() << " ";
     for (int i = 0; i < vec.size(); ++i) {
         oss << vec[i] << " ";
     }
@@ -188,7 +194,7 @@ std::string Server::SerializeVector(const std::vector<Eigen::MatrixXi>& vec)
     std::ostringstream oss;
     oss << vec.size() << " " << vec[0].rows() << " " << vec[0].cols() << " ";
     for(const auto& mat : vec)
-        oss << SerializeMatrix(mat) << " ";
+        oss << SerializeMatrix(mat, false) << " ";
 
     return oss.str();
 }
@@ -198,7 +204,7 @@ std::string Server::SerializeVector(const std::vector<std::vector<unsigned>>& ve
     std::ostringstream oss;
     oss << vec.size() << " " << vec[0].size() << " ";
     for(const auto& v : vec)
-        oss << SerializeVector(v) << " ";
+        oss << SerializeVector(v, false) << " ";
 
     return oss.str();
 }
@@ -223,10 +229,12 @@ std::string Server::SerializeResetVector(const ResetVector& reset_vector)
 
     state = SerializeState(reset_vector.state);
 
-    for(const auto& act : reset_vector.actions)
-    {
-        actions += SerializeVector(act) + " ";
-    }
+    actions = SerializeVector(reset_vector.actions);
+//
+//    for(const auto& act : reset_vector.actions)
+//    {
+//        actions += SerializeVector(act) + " ";
+//    }
 
     return obs_string + " " + state + " " + actions;
 }

@@ -42,9 +42,9 @@ private:
 
     std::shared_ptr<SMAWS::ScenarioSimulator> m_Simulator;
 
-    std::string SerializeMatrix(const Eigen::MatrixXi&);
+    std::string SerializeMatrix(const Eigen::MatrixXi&, const bool& add_size=true);
+    std::string SerializeVector(const std::vector<unsigned>&, const bool& add_size=true);
     std::string SerializeVector(const Eigen::Vector3i&);
-    std::string SerializeVector(const std::vector<unsigned>&);
     std::string SerializeVector(const std::vector<Eigen::MatrixXi>&);
     std::string SerializeVector(const std::vector<std::vector<unsigned>>&);
     std::string SerializeState(const State&);
